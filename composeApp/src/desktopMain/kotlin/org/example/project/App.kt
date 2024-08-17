@@ -11,9 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -41,26 +39,38 @@ private fun Main(viewModel: MainViewModel) {
     val state by viewModel.uiState.collectAsState()
     if (state.isFileChooserOpen) {
         FileDialog(
+            fileType = state.fileType,
             onCloseRequest = {
-                viewModel.setFileChooserOpen(false)
-                viewModel.setFile(it ?: "")
+                viewModel.setFileChooserClose()
+                when (state.fileType) {
+                    FileType.AAB -> viewModel.setFile(it ?: "")
+                    FileType.KEYSTORE -> viewModel.setKeystore(it ?: "")
+                }
             }
         )
     }
     MainComponent(
         state = state,
-        openFileChooser = { viewModel.setFileChooserOpen(true) },
+        openFileChooser = { viewModel.setFileChooserOpen(it) },
         convert = { viewModel.fromAABToAPK() },
-        showInFolder = { viewModel.openContainingFolder(state.outputFile) }
+        showInFolder = { viewModel.openContainingFolder(state.outputFile) },
+        setKeystorePassword = { viewModel.setKeystorePassword(it) },
+        setAlias = { viewModel.setAlias(it) },
+        setAliasPassword = { viewModel.setAliasPassword(it) },
+        resetKeyStore = { viewModel.resetKeystore() }
     )
 }
 
 @Composable
 private fun MainComponent(
     state: MainUiState,
-    openFileChooser: () -> Unit,
+    openFileChooser: (fileType: FileType) -> Unit,
     convert: () -> Unit,
-    showInFolder: () -> Unit
+    showInFolder: () -> Unit,
+    setKeystorePassword: (text: String) -> Unit,
+    setAlias: (text: String) -> Unit,
+    setAliasPassword: (text: String) -> Unit,
+    resetKeyStore: () -> Unit
 ) {
     Column(
         Modifier.fillMaxWidth().wrapContentHeight().background(BackgroundColor).padding(16.dp),
@@ -81,12 +91,12 @@ private fun MainComponent(
                 .widthIn(600.dp)
                 .fillMaxWidth()
                 .dashedBorder(SolidColor(SecondaryTextColor), shape = RoundedCornerShape(12.dp))
-                .clickable { openFileChooser() }
+                .clickable { openFileChooser(FileType.AAB) }
                 .padding(16.dp)
         ) {
             if (state.file.isEmpty()) {
                 Text(
-                    "Drop your AAB here or browse",
+                    "Click here to browse your AAB",
                     modifier = Modifier.align(Alignment.Center),
                     style = MaterialTheme.typography.body1,
                     color = SecondaryTextColor
@@ -98,6 +108,96 @@ private fun MainComponent(
                     style = MaterialTheme.typography.body1,
                     color = PrimaryTextColor
                 )
+            }
+        }
+        Column(
+            Modifier
+                .widthIn(600.dp)
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            var isDebug by remember { mutableStateOf(true) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "debug.keystore",
+                    modifier = Modifier.padding(end = 8.dp),
+                    style = MaterialTheme.typography.subtitle1,
+                    color = PrimaryTextColor
+                )
+                RadioButton(
+                    selected = isDebug,
+                    onClick = {
+                        isDebug = true
+                        resetKeyStore()
+                    }
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "release.keystore",
+                    modifier = Modifier.padding(end = 2.dp),
+                    style = MaterialTheme.typography.subtitle1,
+                    color = PrimaryTextColor
+                )
+                RadioButton(
+                    selected = isDebug.not(),
+                    onClick = { isDebug = false }
+                )
+            }
+            if (isDebug.not()) {
+                Column(
+                    Modifier
+                        .widthIn(600.dp)
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .dashedBorder(
+                            SolidColor(SecondaryTextColor),
+                            shape = RoundedCornerShape(12.dp),
+                            gapLength = 0.dp
+                        ).padding(16.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp),
+                        ) {
+                            Text(
+                                text = state.keyStore?.path ?: "",
+                                style = MaterialTheme.typography.subtitle2,
+                                color = PrimaryTextColor
+                            )
+                            Button(
+                                modifier = Modifier.padding(16.dp),
+                                onClick = { openFileChooser(FileType.KEYSTORE) },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryColor),
+                                enabled = state.error == null
+                            ) {
+                                val text = "Browse Keystore"
+                                Text(text, color = Color.White)
+                            }
+                        }
+                        TextField(
+                            value = state.keyStore?.keyStorePassword ?: "",
+                            placeholder = { Text("Keystore password") },
+                            modifier = Modifier.padding(8.dp),
+                            onValueChange = setKeystorePassword
+                        )
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextField(
+                            value = state.keyStore?.alias ?: "",
+                            placeholder = { Text("Keystore alias") },
+                            modifier = Modifier.padding(8.dp),
+                            onValueChange = setAlias
+                        )
+                        TextField(
+                            value = state.keyStore?.aliasPassword ?: "",
+                            placeholder = { Text("Keystore alias password") },
+                            modifier = Modifier.padding(8.dp),
+                            onValueChange = setAliasPassword
+                        )
+                    }
+                }
             }
         }
         AnimatedVisibility(state.output != null) {
@@ -186,13 +286,14 @@ fun Modifier.dashedBorder(
 @Composable
 private fun FileDialog(
     parent: Frame? = null,
+    fileType: FileType,
     onCloseRequest: (result: String?) -> Unit
 ) = AwtWindow(
     create = {
         object : FileDialog(parent, "Choose a file", LOAD) {
             override fun setVisible(value: Boolean) {
                 this.filenameFilter = FilenameFilter { dir, name ->
-                    name.contains(".aab")
+                    name.contains(fileType.pattern)
                 }
                 super.setVisible(value)
                 if (value) {
@@ -211,7 +312,11 @@ private fun MainComponentPreview() {
         state = MainUiState(),
         openFileChooser = {},
         convert = {},
-        showInFolder = {}
+        showInFolder = {},
+        setKeystorePassword = {},
+        setAlias = {},
+        setAliasPassword = {},
+        resetKeyStore = {}
     )
 }
 

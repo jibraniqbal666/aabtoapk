@@ -46,7 +46,11 @@ class MainViewModel : ViewModel() {
             val workingDir = Path("$home/.aabtoapk")
 
             try {
-                convertToAPK(src, workingDir) { _uiState.update { state -> state.copy(output = state.output + it) } }
+                convertToAPK(
+                    src,
+                    workingDir,
+                    _uiState.value.keyStore
+                ) { _uiState.update { state -> state.copy(output = state.output + it) } }
                 unzipAPKs(workingDir) { _uiState.update { state -> state.copy(output = state.output + it) } }
                 moveAPKToSrc(dst, workingDir) { _uiState.update { state -> state.copy(output = state.output + it) } }
             } catch (e: Exception) {
@@ -63,8 +67,58 @@ class MainViewModel : ViewModel() {
         _uiState.update { state -> state.copy(file = file, output = null, error = null, outputFile = null) }
     }
 
-    fun setFileChooserOpen(isOpen: Boolean) {
-        _uiState.update { state -> state.copy(isFileChooserOpen = isOpen) }
+    fun setFileChooserOpen(fileType: FileType) {
+        _uiState.update { state -> state.copy(isFileChooserOpen = true, fileType = fileType) }
+    }
+
+    fun setFileChooserClose() {
+        _uiState.update { state -> state.copy(isFileChooserOpen = false) }
+    }
+
+    fun resetKeystore() {
+        _uiState.update { state -> state.copy(keyStore = null, error = null) }
+    }
+
+    fun setKeystore(path: String) {
+        _uiState.update { state ->
+            state.copy(
+                keyStore = state.keyStore?.copy(path = path) ?: KeyStore(
+                    path = path
+                ),
+                error = null
+            )
+        }
+    }
+
+    fun setKeystorePassword(text: String) {
+        _uiState.update { state ->
+            state.copy(
+                keyStore = state.keyStore?.copy(keyStorePassword = text) ?: KeyStore(
+                    keyStorePassword = text
+                ),
+                error = null
+            )
+        }
+    }
+
+    fun setAlias(text: String) {
+        _uiState.update { state ->
+            state.copy(
+                keyStore = state.keyStore?.copy(alias = text) ?: KeyStore(alias = text),
+                error = null
+            )
+        }
+    }
+
+    fun setAliasPassword(text: String) {
+        _uiState.update { state ->
+            state.copy(
+                keyStore = state.keyStore?.copy(aliasPassword = text) ?: KeyStore(
+                    aliasPassword = text
+                ),
+                error = null
+            )
+        }
     }
 
     private fun setIsLoading(isLoading: Boolean) {
@@ -84,17 +138,22 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    private fun convertToAPK(src: String, workingDir: Path, output: (text: String) -> Unit) {
+    private fun convertToAPK(src: String, workingDir: Path, keyStore: KeyStore?, output: (text: String) -> Unit) {
         val tempDst = "$workingDir/app.apks"
         val tempDstPath = Path(tempDst)
         tempDstPath.deleteIfExists()
 
         var runCommand = "java -jar $workingDir/bundletool.jar build-apks"
         runCommand += " --bundle=${src} --output=${tempDst} --mode=universal"
-        //        run_command += " --ks=#{key_store}"
-        //        run_command += " --ks-pass=pass:#{key_store_password}"
-        //        run_command += " --ks-key-alias=#{key_store_alias}"
-        //        run_command += " --key-pass=pass:#{key_store_alias_password}"
+        if (keyStore != null && keyStore.valid()) {
+            runCommand += " --ks=${keyStore.path}"
+            runCommand += " --ks-pass=pass:${keyStore.keyStorePassword}"
+            runCommand += " --ks-key-alias=${keyStore.alias}"
+            runCommand += " --key-pass=pass:${keyStore.aliasPassword}"
+        }
+        if (keyStore != null && keyStore.valid().not()) {
+            throw Exception(keyStore.showInvalidMessage())
+        }
 
         runCommand.runCommand(output)
     }
@@ -121,7 +180,9 @@ class MainViewModel : ViewModel() {
 data class MainUiState(
     val file: String = "",
     val isFileChooserOpen: Boolean = false,
+    val fileType: FileType = FileType.AAB,
     val isLoading: Boolean = false,
+    val keyStore: KeyStore? = null,
     val outputFile: String? = null,
     val output: String? = null,
     val error: String? = null
