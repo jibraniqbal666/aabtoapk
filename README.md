@@ -13,5 +13,5 @@ AAB to APK Converter UI is a user-friendly graphical interface that wraps around
 - **Java Development Kit (JDK) (version 8 or higher)**
 
 ## Download
-- [Release - 1.0.0 - DMG](https://github.com/jibraniqbal666/aabtoapk/releases/download/1.0.0/AABtoAPK.dmg)
+- [Release - 1.0.0 - MacOS](https://github.com/jibraniqbal666/aabtoapk/releases/download/1.0.0/AABtoAPK.dmg)
 
