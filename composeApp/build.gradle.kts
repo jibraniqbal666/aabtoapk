@@ -36,8 +36,17 @@ compose.desktop {
         mainClass = "org.example.project.MainKt"
 
         nativeDistributions {
+            macOS {
+                iconFile.set(project.file("icon.icns"))
+            }
+            windows {
+                iconFile.set(project.file("icon.ico"))
+            }
+            linux {
+                iconFile.set(project.file("icon.png"))
+            }
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.example.project"
+            packageName = "org.aabtoapk.project"
             packageVersion = "1.0.0"
         }
     }
