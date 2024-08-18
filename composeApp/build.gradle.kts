@@ -47,7 +47,7 @@ compose.desktop {
             }
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "org.aabtoapk.project"
-            packageVersion = "1.0.0"
+            packageVersion = "0.0.1"
         }
     }
 }
