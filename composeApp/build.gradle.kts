@@ -46,7 +46,7 @@ compose.desktop {
                 iconFile.set(project.file("icon.png"))
             }
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.aabtoapk.project"
+            packageName = "AABtoAPK"
             packageVersion = "1.0.0"
         }
     }
