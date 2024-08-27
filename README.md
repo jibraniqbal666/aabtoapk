@@ -12,6 +12,10 @@ AAB to APK Converter UI is a user-friendly graphical interface that wraps around
 ### Prerequisites
 - **Java Development Kit (JDK) (version 8 or higher)**
 
-## Download
-- [Release - 1.0.0 - MacOS - Arm](https://github.com/jibraniqbal666/aabtoapk/releases/download/1.0.0/AABtoAPK.dmg)
+## Installation
+1. Download the appropriate package
+  - [Release - 1.0.0 - MacOS - Arm](https://github.com/jibraniqbal666/aabtoapk/releases/download/1.0.0/aabtoapk-1.0-mac-aarch64.zip)
+  - [Release - 1.0.0 - MacOS - Intel](https://github.com/jibraniqbal666/aabtoapk/releases/download/1.0.0/aabtoapk-1.0-mac-intel.zip)
+2. Unzip and move it to application
+3. Important - Run this ``xattr -c /Applications/AABtoAPK.app`` in terminal _(This is to bypass Apple Gatekeeper, so I don't have top pay for 90$ license)_
 
