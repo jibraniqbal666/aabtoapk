@@ -16,4 +16,4 @@ build/
 /captures
 .externalNativeBuild
 .cxx
-output/
+output/*
